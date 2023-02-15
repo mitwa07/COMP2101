@@ -1,19 +1,31 @@
 # /bin/COMP2101/bash
 # sysinfo.sh
 
+
+#HOSTNAME of the system 
+hostname=$( hostname )
+
 #FQDN of the system
-echo Fully Qualified Domain Name : $( hostname -f)
+FQDN=$(hostname -f)
 
 #Operating System & Kernel Version  of the system
-echo System Information:- 
-hostnamectl | grep 'Operating \| Kernel'
+SystemInformation=$(hostnamectl | grep 'Operating \| Kernel')
 
 #IP Address of the system
-echo IP address is: $(hostname -I )
+IPaddress=$(hostname -I )
 
 #RootFile Storage Status System
-echo Root File System Status :
-df -h | grep Filesystem 
-df -h | grep /dev/sda3 
+FileStatus=$(df --output=avail --block-size=G / | awk 'NR==2 {print $1 }')
+
+cat <<EOF
+Report for $hostname
+######################################
+FQDN:$FQDN
+$SystemInformation
+Ip Address :$IPaddress
+Root File System Available Space :$FileStatus
+######################################
+EOF
+ 
 
 
