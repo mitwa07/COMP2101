@@ -1,0 +1,105 @@
+#!/bin/bash
+
+#Checking for lxd & install if not exist.
+which lxd > /dev/null
+# you can use echo $?:check to state of lxd if 0 comes up we are good !
+
+if [ $? -ne 0 ]; then
+               	echo "Installing lxd- You may need a password"
+	sudo snap install lxd #command to install lxd
+	if [ $? -ne 0 ]; then
+			echo "Failed lxd install"
+		exit 1
+	fi
+fi
+
+
+#Checking lxdbr0 interface & create one if not exist.
+
+ip link show lxdbr0 > /dev/null
+
+if [ $? -ne 0 ]; then
+         	echo "Initializing lxd"
+ 	lxd init --auto > /dev/null
+	if [ $? -ne 0 ]; then
+                echo " failed lxd intialization"
+		exit 1
+	fi
+fi
+
+
+#Creating Container running Ubuntu server named COMP2101-S22.
+
+lxc list | grep -w "COMP2101-S22" > /dev/null
+
+if [ $? -ne 0 ]; then
+	echo "Creating container named as COMP2101-S22"
+	lxc launch ubuntu:20.04 COMP2101-S22 #command to install container
+	if [ $? -ne 0 ]; then
+		echo "Container Creation is Unsuccessful! Try Again!"
+		exit 1
+	fi
+	while [ $(lxc list | grep -w "COMP2101-S22" | awk '{print $6}') = "|" ]; do
+	echo "Container named COMP2101-S22 Created"
+	done
+fi
+
+
+#Adding the container’s IP address in /etc/hosts if it does not exist.
+
+grep -w "COMP2101-S22" /etc/hosts > /dev/null
+if [ $? -ne 0 ]; then
+	
+        ##Creating Variables to add ip address and hostname##
+	ip=$(lxc list COMP2101-S22 | grep eth0 | awk '{print $6}')
+	hostname="COMP2101-S22"
+	echo "Adding COMP2101-S22 container to /etc/hosts"
+        sudo sed -i '$a '"$(echo "$ip\t$hostname")"'' /etc/hosts
+
+	if [ $? -ne 0 ]; then
+
+		echo "Appending failed! Check for Ip address in /etc/hosts file"
+		exit 1
+	fi
+fi
+
+
+
+#Checking for Apache2 in container & install if not exist.
+
+lxc exec COMP2101-S22 -- which apache2 > /dev/null
+if [ $? -ne 0 ]; then
+	echo "Installing apache on container COMP2101-S22"
+	lxc exec COMP2101-S22 -- apt install apache2 -y > /dev/null #command to install apache
+	if [ $? -ne 0 ]; then
+	echo "Apache installation unsuccessful."
+		exit 1
+	fi
+fi
+
+
+#Checking for curl & install if not exist.
+
+which curl > /dev/null
+
+if [ $? -ne 0 ]; then
+	sudo apt install curl -y > /dev/null  #command to install curl
+	if [ $? -ne 0 ]; then
+	echo "Curl installation unsuccessful."
+		exit 1
+	fi
+fi
+
+
+#Notyfying the user about success or failure of webpage retrival
+
+echo "Checking default web page retrival from container COMP2101-S22 "
+
+curl http://COMP2101-S22 > /dev/null
+
+if [ $? -ne 0 ]; then
+	echo "Web page retrieval was Unsuccessful"
+else
+	echo "Web page Retrieval was Successful"
+fi
+exit
